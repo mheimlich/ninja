@@ -28,6 +28,10 @@
 #include <sys/termios.h>
 #endif
 
+#if defined(__linux__) || defined(__GLIBC__)
+#include <sys/sysinfo.h>
+#endif
+
 #include "build_log.h"
 #include "clparser.h"
 #include "debug_flags.h"
@@ -627,6 +631,16 @@ size_t RealCommandRunner::CanRunMore() const {
     if (load_capacity < capacity)
       capacity = load_capacity;
   }
+
+#if defined(__linux__) || defined(__GLIBC__)
+  if (config_.max_used_memory > 0) {
+    struct sysinfo si;
+    if (sysinfo(&si) == 0) {
+      int64_t used_ram = (si.totalram - si.freeram) * si.mem_unit;
+      capacity = config_.max_used_memory - used_ram;
+    }
+  }
+#endif
 
   if (capacity < 0)
     capacity = 0;
