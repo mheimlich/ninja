@@ -880,9 +880,22 @@ double GetLoadAverage() {
 
   return posix_compatible_load;
 }
+
+size_t GetUsedMemory() {
+  MEMORYSTATUSEX statex;
+  statex.dwLength = sizeof(statex);
+  if (!GlobalMemoryStatusEx(&statex)) {
+    return 0;
+  }
+  return statex.ullTotalPhys - statex.ullAvailPhys;
+}
 #elif defined(__PASE__)
 double GetLoadAverage() {
   return -0.0f;
+}
+
+size_t GetUsedMemory() {
+  return 0;
 }
 #elif defined(_AIX)
 double GetLoadAverage() {
@@ -894,16 +907,33 @@ double GetLoadAverage() {
   // Calculation taken from comment in libperfstats.h
   return double(cpu_stats.loadavg[0]) / double(1 << SBITS);
 }
+
+size_t GetUsedMemory() {
+  return 0;
+}
 #elif defined(__UCLIBC__) || (defined(__BIONIC__) && __ANDROID_API__ < 29)
 double GetLoadAverage() {
   struct sysinfo si;
-  if (sysinfo(&si) != 0)
+  if (sysinfo(&si) != 0) {
     return -0.0f;
+  }
   return 1.0 / (1 << SI_LOAD_SHIFT) * si.loads[0];
+}
+
+size_t GetUsedMemory() {
+  struct sysinfo si;
+  if (sysinfo(&si) != 0) {
+    return 0;
+  }
+  return (si.totalram - si.freeram - si.bufferram) * si.mem_unit;
 }
 #elif defined(__HAIKU__)
 double GetLoadAverage() {
     return -0.0f;
+}
+
+size_t GetUsedMemory() {
+  return 0;
 }
 #else
 double GetLoadAverage() {
@@ -914,6 +944,34 @@ double GetLoadAverage() {
     return -0.0f;
   }
   return loadavg[0];
+}
+
+size_t GetUsedMemory() {
+  std::ifstream file("/proc/meminfo");
+
+  if (file.is_open()) {
+    size_t mem_total = 0;
+    for (std::string line; std::getline(file, line);) {
+      if (mem_total == 0) {
+        if (line.find("MemTotal:") == 0) {
+          mem_total = std::stoull(line.substr(9));
+        }
+      } else {
+        if (line.find("MemAvailable:") == 0) {
+          size_t mem_available = std::stoull(line.substr(13));
+          return (mem_total - mem_available) * 1024;
+        }
+      }
+    }
+  }
+  else {
+    struct sysinfo si;
+    if (sysinfo(&si) == 0) {
+      return (si.totalram - si.freeram - si.bufferram) * si.mem_unit;
+    }
+  }
+
+  return 0;
 }
 #endif // _WIN32
 

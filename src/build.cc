@@ -634,11 +634,8 @@ size_t RealCommandRunner::CanRunMore() const {
 
 #if defined(__linux__) || defined(__GLIBC__)
   if (config_.max_used_memory > 0) {
-    struct sysinfo si;
-    if (sysinfo(&si) == 0) {
-      int64_t used_ram = (si.totalram - si.freeram) * si.mem_unit;
-      capacity = config_.max_used_memory - used_ram;
-    }
+      if (GetUsedMemory() > config_.max_used_memory)
+        capacity = 0;
   }
 #endif
 

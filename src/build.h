@@ -182,7 +182,9 @@ struct BuildConfig {
   /// The maximum load average we must not exceed. A negative value
   /// means that we do not have any limit.
   double max_load_average;
-  int64_t max_used_memory;
+  /// The maximum amount of used memory we must not exceed. Zero means
+  /// that we do not have any limit.
+  size_t max_used_memory;
   DepfileParserOptions depfile_parser_options;
 };
 

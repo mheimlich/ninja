@@ -1492,10 +1492,10 @@ int ReadFlags(int* argc, char*** argv,
       }
       case 'm': {
         char* end;
-        int value = strtol(optarg, &end, 10);
+        int64_t value = strtoll(optarg, &end, 10);
         if (*end != 0 || value < 0)
           Fatal("invalid -m parameter");
-        config->max_used_memory = value > 0 ? (value * 1024 * 1024) : 0;
+        config->max_used_memory = value * 1024 * 1024;
         break;
       }
       case 'n':
